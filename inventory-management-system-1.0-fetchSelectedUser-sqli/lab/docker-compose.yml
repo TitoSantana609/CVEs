@@ -1,0 +1,36 @@
+# Local, isolated lab for testing the unauthenticated SQL injection in
+# code-projects "Inventory Management System" 1.0 (php_action/fetchSelectedUser.php).
+# For authorized security research only. Binds to 127.0.0.1 so it is NOT exposed on the network.
+
+services:
+  db:
+    image: mariadb:11
+    container_name: ims-lab-db
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: store
+    volumes:
+      - ./db/store.sql:/docker-entrypoint-initdb.d/01-store.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build:
+      context: .
+      dockerfile: web.Dockerfile
+    container_name: ims-lab-web
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASS: root
+      DB_NAME: store
+    ports:
+      - "127.0.0.1:8080:80"   # reach it at http://127.0.0.1:8080
+    volumes:
+      - ./app:/var/www/html

